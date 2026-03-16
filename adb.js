@@ -157,56 +157,100 @@ const ADB = (() => {
   }
 
   // ── Manejo de autenticación ──────────────────────────────
+  // Android cierra la conexión USB al mostrar el diálogo "Confiar en esta PC".
+  // El flujo correcto es:
+  //   1. Recibir AUTH_TOKEN del dispositivo
+  //   2. Intentar firmar con clave RSA (si el dispositivo ya confía en nosotros)
+  //   3. Si no confía: enviar clave pública, soltar la interfaz USB,
+  //      esperar a que el usuario acepte, y reconectar.
   async function handleAuth() {
-    while (true) {
-      const msg = await recv();
+    const msg = await recv();
 
-      if (msg.cmd === CMD.CNXN) {
-        // Dispositivo aceptó sin AUTH (raro pero posible)
-        log('Conexión aceptada directamente');
+    // Dispositivo aceptó sin AUTH
+    if (msg.cmd === CMD.CNXN) {
+      log('Conexión aceptada directamente');
+      return;
+    }
+
+    if (msg.cmd !== CMD.AUTH || msg.arg0 !== AUTH_TOKEN) {
+      throw new Error('Respuesta ADB inesperada durante handshake');
+    }
+
+    log('Autenticación requerida...');
+
+    // Generar par RSA para esta sesión
+    const keyPair     = await generateRSAKeyPair();
+    const pubKeyBytes = await exportPublicKeyADB(keyPair.publicKey);
+
+    // Intentar firma — funciona si el dispositivo ya confía en este navegador
+    try {
+      const signature = await signToken(keyPair.privateKey, msg.payload);
+      await send(CMD.AUTH, AUTH_SIGNATURE, 0, signature);
+      const resp = await recvWithTimeout(3000);
+      if (resp && resp.cmd === CMD.CNXN) {
+        log('✓ Autenticado (dispositivo conocido)');
         return;
       }
+    } catch(e) { /* no confía, continuar */ }
 
-      if (msg.cmd === CMD.AUTH) {
-        if (msg.arg0 === AUTH_TOKEN) {
-          // Dispositivo envía un token — necesitamos firmarlo
-          // En WebUSB no podemos firmar con RSA real sin la clave privada.
-          // Enviamos nuestra clave pública para que Android muestre el diálogo
-          // "¿Confiar en esta computadora?"
-          log('Autenticación requerida — acepta el diálogo en tu teléfono...');
+    // Enviar clave pública → Android muestra diálogo "Confiar en esta PC"
+    // y DESCONECTA el USB temporalmente. Esto es normal.
+    log('Acepta el diálogo "Confiar en esta computadora" en tu teléfono...');
+    try {
+      await send(CMD.AUTH, AUTH_RSAPUBKEY, 0, pubKeyBytes);
+    } catch(e) { /* la desconexión puede interrumpir el send, es normal */ }
 
-          // Generar par de claves RSA efímero para esta sesión
-          const keyPair = await generateRSAKeyPair();
-          const pubKeyBytes = await exportPublicKeyADB(keyPair.publicKey);
+    // Soltar la interfaz — Android necesita reconectar el dispositivo
+    try {
+      await device.releaseInterface(iface.interfaceNumber);
+    } catch(e) {}
+    try {
+      await device.close();
+    } catch(e) {}
 
-          // Intentar firma primero
-          try {
-            const signature = await signToken(keyPair.privateKey, msg.payload);
-            await send(CMD.AUTH, AUTH_SIGNATURE, 0, signature);
-            const resp = await recv();
-            if (resp.cmd === CMD.CNXN) {
-              log('✓ Autenticado con firma RSA');
-              return;
-            }
-          } catch(e) {
-            // Firma falló, enviar clave pública
-          }
+    log('Esperando reconexión del dispositivo (hasta 30s)...');
 
-          // Enviar clave pública → Android muestra diálogo
-          await send(CMD.AUTH, AUTH_RSAPUBKEY, 0, pubKeyBytes);
-          log('Esperando que aceptes "Confiar en esta computadora" en tu teléfono...');
+    // Esperar a que Android reconecte tras aceptar el diálogo
+    // Polling: intentar reconectar cada 2 segundos
+    for (let i = 0; i < 15; i++) {
+      await sleep(2000);
+      try {
+        await device.open();
+        if (device.configuration === null) {
+          await device.selectConfiguration(1);
+        }
+        await device.claimInterface(iface.interfaceNumber);
 
-          // Esperar CNXN después de que el usuario acepte
-          const final = await recvWithTimeout(30000);
+        // Reenviar CNXN
+        await send(CMD.CNXN, VERSION, MAX_PAYLOAD, BANNER);
+        const resp = await recvWithTimeout(3000);
+
+        if (resp && resp.cmd === CMD.CNXN) {
+          log('✓ Dispositivo reconectado y autenticado');
+          return;
+        }
+        if (resp && resp.cmd === CMD.AUTH) {
+          // Necesita firma de nuevo con el nuevo token
+          const sig2 = await signToken(keyPair.privateKey, resp.payload);
+          await send(CMD.AUTH, AUTH_SIGNATURE, 0, sig2);
+          const final = await recvWithTimeout(3000);
           if (final && final.cmd === CMD.CNXN) {
-            log('✓ Dispositivo de confianza aceptado');
+            log('✓ Autenticado tras reconexión');
             return;
           }
-          throw new Error('Tiempo de espera agotado. Acepta el diálogo en el teléfono.');
         }
+      } catch(e) {
+        // Dispositivo todavía no está listo, seguir esperando
+        if (i % 3 === 0) log(`Esperando... (${(i+1)*2}s)`);
       }
     }
+
+    throw new Error(
+      'No se pudo reconectar. Asegúrate de haber tocado "Confiar" en tu teléfono y reintenta.'
+    );
   }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
   // ── Generar claves RSA para ADB ──────────────────────────
   async function generateRSAKeyPair() {
