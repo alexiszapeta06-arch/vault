@@ -10,14 +10,9 @@ const Installer = (() => {
 
   // ── URLs de descarga ────────────────────────────────────
   // Termux oficial de GitHub Releases (no Play Store)
-  // GitHub Releases no permite fetch directo por CORS.
-  // Usamos el proxy de jsdelivr que sí tiene CORS abierto,
-  // con fallback a corsproxy.io si falla.
-  const TERMUX_FILENAME = 'termux-app_v0.119.0-beta.3+apt-android-7-github-debug_arm64-v8a.apk';
-  const TERMUX_REPO     = 'termux/termux-app';
-  const TERMUX_TAG      = 'v0.119.0-beta.3';
-  const TERMUX_URL      = `https://cdn.jsdelivr.net/gh/${TERMUX_REPO}@${TERMUX_TAG}/${TERMUX_FILENAME}`;
-  const TERMUX_URL_FB   = `https://corsproxy.io/?https://github.com/${TERMUX_REPO}/releases/download/${TERMUX_TAG}/${TERMUX_FILENAME}`;
+  // APK alojado en el repo con Git LFS — CORS abierto via GitHub Pages
+  const TERMUX_URL    = 'https://alexiszapeta06-arch.github.io/vault/termux.apk';
+  const TERMUX_URL_FB = 'https://media.githubusercontent.com/media/alexiszapeta06-arch/vault/main/termux.apk';
 
   // Script de setup que corre dentro de Termux al primer arranque
   // Instala AuroraOS (Alpine) + Vault server
