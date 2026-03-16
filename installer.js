@@ -10,7 +10,14 @@ const Installer = (() => {
 
   // ── URLs de descarga ────────────────────────────────────
   // Termux oficial de GitHub Releases (no Play Store)
-  const TERMUX_URL = 'https://github.com/termux/termux-app/releases/download/v0.119.0-beta.3/termux-app_v0.119.0-beta.3+apt-android-7-github-debug_arm64-v8a.apk';
+  // GitHub Releases no permite fetch directo por CORS.
+  // Usamos el proxy de jsdelivr que sí tiene CORS abierto,
+  // con fallback a corsproxy.io si falla.
+  const TERMUX_FILENAME = 'termux-app_v0.119.0-beta.3+apt-android-7-github-debug_arm64-v8a.apk';
+  const TERMUX_REPO     = 'termux/termux-app';
+  const TERMUX_TAG      = 'v0.119.0-beta.3';
+  const TERMUX_URL      = `https://cdn.jsdelivr.net/gh/${TERMUX_REPO}@${TERMUX_TAG}/${TERMUX_FILENAME}`;
+  const TERMUX_URL_FB   = `https://corsproxy.io/?https://github.com/${TERMUX_REPO}/releases/download/${TERMUX_TAG}/${TERMUX_FILENAME}`;
 
   // Script de setup que corre dentro de Termux al primer arranque
   // Instala AuroraOS (Alpine) + Vault server
@@ -214,12 +221,23 @@ echo ""
   function step(n, msg)                  { onStep(n, msg); }
 
   // ── Descargar APK con progreso ──────────────────────────
-  async function downloadAPK(url, name, onProgress) {
+  async function downloadAPK(url, name, onProgress, fallbackUrl) {
     log(`Descargando ${name}...`);
 
-    // Intentar con fetch + ReadableStream para progreso
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status} al descargar ${name}`);
+    // Intentar URL principal, luego fallback si falla CORS
+    let resp;
+    try {
+      resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    } catch(e) {
+      if (fallbackUrl) {
+        log(`Reintentando con mirror alternativo...`);
+        resp = await fetch(fallbackUrl);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status} al descargar ${name}`);
+      } else {
+        throw new Error(`No se pudo descargar ${name}: ${e.message}`);
+      }
+    }
 
     const total  = parseInt(resp.headers.get('content-length') || '0');
     const reader = resp.body.getReader();
@@ -267,7 +285,8 @@ echo ""
 
       const termuxData = await downloadAPK(
         TERMUX_URL, 'Termux',
-        p => status(`Descargando Termux... ${p}%`, 'loading')
+        p => status(`Descargando Termux... ${p}%`, 'loading'),
+        TERMUX_URL_FB
       );
 
       // ── PASO 3: Instalar Termux ───────────────────────
