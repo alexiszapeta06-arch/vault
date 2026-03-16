@@ -1,0 +1,388 @@
+/**
+ * Vault Installer — adb.js
+ * Implementación del protocolo ADB sobre WebUSB.
+ * No requiere drivers ni software en la PC.
+ *
+ * Protocolo ADB:
+ *   - Cada mensaje tiene header de 24 bytes + payload
+ *   - Handshake: CNXN → AUTH → OPEN → servicios
+ *   - Instalación via "exec:pm install -r -t /data/local/tmp/<apk>"
+ */
+
+const ADB = (() => {
+
+  // ── Constantes del protocolo ────────────────────────────
+  const CMD = {
+    SYNC: 0x434e5953,
+    CNXN: 0x4e584e43,
+    AUTH: 0x48545541,
+    OPEN: 0x4e45504f,
+    OKAY: 0x59414b4f,
+    CLSE: 0x45534c43,
+    WRTE: 0x45545257,
+  };
+
+  const AUTH_TOKEN     = 1;
+  const AUTH_SIGNATURE = 2;
+  const AUTH_RSAPUBKEY = 3;
+  const VERSION        = 0x01000000;
+  const MAX_PAYLOAD    = 256 * 1024;
+  const BANNER         = 'host::vault-installer';
+
+  // ── Estado de conexión ──────────────────────────────────
+  let device    = null;
+  let iface     = null;
+  let epIn      = null;
+  let epOut     = null;
+  let localId   = 1;
+  let connected = false;
+  let onLog     = () => {};
+
+  function log(msg) { onLog(msg); }
+
+  // ── Codificación ─────────────────────────────────────────
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+
+  function encode(str) { return enc.encode(str); }
+  function decode(buf) { return dec.decode(buf); }
+
+  function u32le(n) {
+    const b = new Uint8Array(4);
+    new DataView(b.buffer).setUint32(0, n, true);
+    return b;
+  }
+
+  function readU32(buf, offset) {
+    return new DataView(buf.buffer, buf.byteOffset + offset, 4)
+      .getUint32(0, true);
+  }
+
+  // ── Construir mensaje ADB ────────────────────────────────
+  function makeMessage(cmd, arg0, arg1, data) {
+    const payload  = data ? (data instanceof Uint8Array ? data : encode(data)) : new Uint8Array(0);
+    const dataLen  = payload.length;
+    const checksum = payload.reduce((s, b) => (s + b) & 0xFFFFFFFF, 0);
+    const magic    = (cmd ^ 0xFFFFFFFF) >>> 0;
+
+    const msg = new Uint8Array(24 + dataLen);
+    const dv  = new DataView(msg.buffer);
+    dv.setUint32(0,  cmd,      true);
+    dv.setUint32(4,  arg0,     true);
+    dv.setUint32(8,  arg1,     true);
+    dv.setUint32(12, dataLen,  true);
+    dv.setUint32(16, checksum, true);
+    dv.setUint32(20, magic,    true);
+    if (dataLen > 0) msg.set(payload, 24);
+    return msg;
+  }
+
+  // ── Enviar mensaje ───────────────────────────────────────
+  async function send(cmd, arg0, arg1, data) {
+    const msg = makeMessage(cmd, arg0, arg1, data);
+    await device.transferOut(epOut.endpointNumber, msg);
+  }
+
+  // ── Recibir mensaje ──────────────────────────────────────
+  async function recv() {
+    // Leer header
+    const hdr = await device.transferIn(epIn.endpointNumber, 24);
+    const h   = new Uint8Array(hdr.data.buffer);
+    const cmd     = readU32(h, 0);
+    const arg0    = readU32(h, 4);
+    const arg1    = readU32(h, 8);
+    const dataLen = readU32(h, 12);
+
+    let payload = new Uint8Array(0);
+    if (dataLen > 0) {
+      const p = await device.transferIn(epIn.endpointNumber, dataLen);
+      payload = new Uint8Array(p.data.buffer);
+    }
+    return { cmd, arg0, arg1, payload };
+  }
+
+  // ── Conectar al dispositivo ──────────────────────────────
+  async function connect(logFn) {
+    if (logFn) onLog = logFn;
+
+    log('Solicitando acceso al dispositivo USB...');
+
+    // Filtro: solo dispositivos Android ADB
+    device = await navigator.usb.requestDevice({
+      filters: [{ classCode: 0xFF, subclassCode: 0x42, protocolCode: 0x01 }]
+    });
+
+    await device.open();
+    log(`Dispositivo: ${device.productName || 'Android'}`);
+
+    // Seleccionar configuración e interfaz ADB
+    if (device.configuration === null) {
+      await device.selectConfiguration(1);
+    }
+
+    // Buscar interfaz ADB (class=0xFF, subclass=0x42, protocol=0x01)
+    let adbIface = null;
+    for (const cfg of device.configurations) {
+      for (const intf of cfg.interfaces) {
+        for (const alt of intf.alternates) {
+          if (alt.interfaceClass    === 0xFF &&
+              alt.interfaceSubclass === 0x42 &&
+              alt.interfaceProtocol === 0x01) {
+            adbIface = intf;
+            epIn  = alt.endpoints.find(e => e.direction === 'in');
+            epOut = alt.endpoints.find(e => e.direction === 'out');
+          }
+        }
+      }
+    }
+
+    if (!adbIface) throw new Error(
+      'Interfaz ADB no encontrada. Activa "Depuración USB" en Opciones de Desarrollador.'
+    );
+
+    iface = adbIface;
+    await device.claimInterface(iface.interfaceNumber);
+    log('Interfaz ADB reclamada');
+
+    // Handshake CNXN
+    await send(CMD.CNXN, VERSION, MAX_PAYLOAD, BANNER);
+    log('Handshake enviado, esperando respuesta del dispositivo...');
+
+    // Manejar AUTH / CNXN de respuesta
+    await handleAuth();
+
+    connected = true;
+    log('✓ Conexión ADB establecida');
+    return true;
+  }
+
+  // ── Manejo de autenticación ──────────────────────────────
+  async function handleAuth() {
+    while (true) {
+      const msg = await recv();
+
+      if (msg.cmd === CMD.CNXN) {
+        // Dispositivo aceptó sin AUTH (raro pero posible)
+        log('Conexión aceptada directamente');
+        return;
+      }
+
+      if (msg.cmd === CMD.AUTH) {
+        if (msg.arg0 === AUTH_TOKEN) {
+          // Dispositivo envía un token — necesitamos firmarlo
+          // En WebUSB no podemos firmar con RSA real sin la clave privada.
+          // Enviamos nuestra clave pública para que Android muestre el diálogo
+          // "¿Confiar en esta computadora?"
+          log('Autenticación requerida — acepta el diálogo en tu teléfono...');
+
+          // Generar par de claves RSA efímero para esta sesión
+          const keyPair = await generateRSAKeyPair();
+          const pubKeyBytes = await exportPublicKeyADB(keyPair.publicKey);
+
+          // Intentar firma primero
+          try {
+            const signature = await signToken(keyPair.privateKey, msg.payload);
+            await send(CMD.AUTH, AUTH_SIGNATURE, 0, signature);
+            const resp = await recv();
+            if (resp.cmd === CMD.CNXN) {
+              log('✓ Autenticado con firma RSA');
+              return;
+            }
+          } catch(e) {
+            // Firma falló, enviar clave pública
+          }
+
+          // Enviar clave pública → Android muestra diálogo
+          await send(CMD.AUTH, AUTH_RSAPUBKEY, 0, pubKeyBytes);
+          log('Esperando que aceptes "Confiar en esta computadora" en tu teléfono...');
+
+          // Esperar CNXN después de que el usuario acepte
+          const final = await recvWithTimeout(30000);
+          if (final && final.cmd === CMD.CNXN) {
+            log('✓ Dispositivo de confianza aceptado');
+            return;
+          }
+          throw new Error('Tiempo de espera agotado. Acepta el diálogo en el teléfono.');
+        }
+      }
+    }
+  }
+
+  // ── Generar claves RSA para ADB ──────────────────────────
+  async function generateRSAKeyPair() {
+    return await crypto.subtle.generateKey(
+      { name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: 'SHA-1' },
+      true, ['sign', 'verify']
+    );
+  }
+
+  async function signToken(privateKey, token) {
+    const sig = await crypto.subtle.sign(
+      'RSASSA-PKCS1-v1_5', privateKey, token
+    );
+    return new Uint8Array(sig);
+  }
+
+  async function exportPublicKeyADB(publicKey) {
+    // ADB espera la clave en formato específico:
+    // longitud (4 bytes LE) + clave pública RSA en formato ADB
+    const exported = await crypto.subtle.exportKey('spki', publicKey);
+    const keyBytes = new Uint8Array(exported);
+    // Añadir longitud y null terminator como espera ADB
+    const result = new Uint8Array(4 + keyBytes.length + 1);
+    new DataView(result.buffer).setUint32(0, keyBytes.length, true);
+    result.set(keyBytes, 4);
+    return result;
+  }
+
+  // ── recv con timeout ─────────────────────────────────────
+  async function recvWithTimeout(ms) {
+    return Promise.race([
+      recv(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout')), ms)
+      )
+    ]).catch(() => null);
+  }
+
+  // ── Abrir stream de servicio ─────────────────────────────
+  async function openStream(service) {
+    const id = localId++;
+    await send(CMD.OPEN, id, 0, service + '\0');
+
+    const resp = await recv();
+    if (resp.cmd !== CMD.OKAY) {
+      throw new Error(`No se pudo abrir servicio: ${service}`);
+    }
+    return { localId: id, remoteId: resp.arg0 };
+  }
+
+  // ── Ejecutar shell command ───────────────────────────────
+  async function shell(cmd, onData) {
+    log(`$ ${cmd}`);
+    const stream = await openStream(`shell:${cmd}`);
+    let output = '';
+
+    while (true) {
+      const msg = await recv();
+      if (msg.cmd === CMD.WRTE) {
+        const chunk = decode(msg.payload);
+        output += chunk;
+        if (onData) onData(chunk);
+        await send(CMD.OKAY, stream.localId, stream.remoteId);
+      } else if (msg.cmd === CMD.CLSE) {
+        break;
+      }
+    }
+    return output;
+  }
+
+  // ── Push archivo al dispositivo ──────────────────────────
+  async function push(data, remotePath, onProgress) {
+    log(`Enviando ${remotePath} (${(data.byteLength / 1024 / 1024).toFixed(1)} MB)...`);
+
+    const stream = await openStream('sync:');
+    const remoteId = stream.remoteId;
+
+    // SEND command
+    const pathPerm  = `${remotePath},0644`;
+    const pathBytes = encode(pathPerm);
+    const sendHdr   = new Uint8Array(8 + pathBytes.length);
+    sendHdr.set(encode('SEND'));
+    new DataView(sendHdr.buffer).setUint32(4, pathBytes.length, true);
+    sendHdr.set(pathBytes, 8);
+
+    await sendSync(stream, sendHdr);
+
+    // Enviar datos en chunks
+    const CHUNK = 64 * 1024;
+    let offset = 0;
+    while (offset < data.byteLength) {
+      const end   = Math.min(offset + CHUNK, data.byteLength);
+      const chunk = data.slice(offset, end);
+      const hdr   = new Uint8Array(8);
+      hdr.set(encode('DATA'));
+      new DataView(hdr.buffer).setUint32(4, chunk.byteLength, true);
+
+      const packet = new Uint8Array(hdr.byteLength + chunk.byteLength);
+      packet.set(hdr);
+      packet.set(new Uint8Array(chunk), 8);
+      await sendSync(stream, packet);
+
+      offset = end;
+      if (onProgress) onProgress(Math.round((offset / data.byteLength) * 100));
+    }
+
+    // DONE
+    const done = new Uint8Array(8);
+    done.set(encode('DONE'));
+    new DataView(done.buffer).setUint32(4, Math.floor(Date.now() / 1000), true);
+    await sendSync(stream, done);
+
+    // Esperar OKAY
+    const resp = await recv();
+    await closeStream(stream);
+
+    log(`✓ ${remotePath} enviado`);
+    return true;
+  }
+
+  async function sendSync(stream, data) {
+    await send(CMD.WRTE, stream.localId, stream.remoteId, data);
+    const ack = await recv();
+    if (ack.cmd !== CMD.OKAY) throw new Error('Sync OKAY esperado');
+  }
+
+  async function closeStream(stream) {
+    await send(CMD.CLSE, stream.localId, stream.remoteId);
+  }
+
+  // ── Instalar APK ─────────────────────────────────────────
+  async function installAPK(apkData, name, onProgress) {
+    log(`Instalando ${name}...`);
+
+    const tmpPath = `/data/local/tmp/${name}`;
+
+    // 1. Push APK al dispositivo
+    await push(apkData, tmpPath, p => {
+      if (onProgress) onProgress('push', p);
+    });
+
+    // 2. Instalar con pm
+    if (onProgress) onProgress('install', 0);
+    const result = await shell(
+      `pm install -r -t -g "${tmpPath}"`,
+      chunk => log(chunk.trim())
+    );
+
+    // 3. Limpiar
+    await shell(`rm -f "${tmpPath}"`);
+
+    const success = result.includes('Success');
+    if (!success) throw new Error(`Instalación falló: ${result.trim()}`);
+
+    if (onProgress) onProgress('install', 100);
+    log(`✓ ${name} instalado`);
+    return true;
+  }
+
+  // ── Desconectar ──────────────────────────────────────────
+  async function disconnect() {
+    if (device) {
+      try {
+        await device.releaseInterface(iface.interfaceNumber);
+        await device.close();
+      } catch(e) {}
+      device = null;
+      connected = false;
+      log('Dispositivo desconectado');
+    }
+  }
+
+  // ── API pública ──────────────────────────────────────────
+  return { connect, installAPK, shell, push, disconnect,
+           get connected() { return connected; } };
+
+})();

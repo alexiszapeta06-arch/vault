@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vault — Instalar</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#07070e;
+  --card:rgba(255,255,255,.06);
+  --card-h:rgba(255,255,255,.10);
+  --bdr:rgba(255,255,255,.09);
+  --bdr-h:rgba(255,255,255,.20);
+  --accent:#4e6df5;
+  --accent2:#7c3aed;
+  --ag:linear-gradient(135deg,#4e6df5,#7c3aed);
+  --green:#22c55e;
+  --amber:#f59e0b;
+  --red:#f43f5e;
+  --t1:#eeeef8;
+  --t2:rgba(238,238,248,.56);
+  --t3:rgba(238,238,248,.30);
+  --blur:blur(28px) saturate(170%);
+  --r:20px;
+  --font:-apple-system,"SF Pro Display","Helvetica Neue",sans-serif;
+  --mono:"SF Mono","Fira Code","Courier New",monospace;
+}
+html{font-size:16px;height:100%;-webkit-text-size-adjust:100%}
+body{
+  font-family:var(--font);background:var(--ink);color:var(--t1);
+  min-height:100%;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+body::before{
+  content:'';position:fixed;inset:0;z-index:-1;
+  background:
+    radial-gradient(ellipse 70% 50% at 10% 0%,rgba(78,109,245,.18) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 40% at 90% 100%,rgba(124,58,237,.13) 0%,transparent 55%),
+    var(--ink);
+}
+
+/* ── Layout ─────────────────────────────────────────────── */
+.wrap{max-width:520px;margin:0 auto;padding:0 20px 80px}
+
+/* ── Header ─────────────────────────────────────────────── */
+.header{display:flex;align-items:center;justify-content:space-between;padding:48px 0 36px}
+.logo{
+  font-size:30px;font-weight:800;letter-spacing:-1px;
+  background:var(--ag);-webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;background-clip:text;
+}
+.beta{
+  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:4px 10px;border-radius:999px;
+  background:rgba(78,109,245,.16);color:#8fa8ff;
+  border:1px solid rgba(78,109,245,.25);
+}
+
+/* ── Hero ───────────────────────────────────────────────── */
+.hero{margin-bottom:36px;animation:fadeUp .5s ease both}
+.hero-icon{
+  width:76px;height:76px;border-radius:20px;
+  background:var(--ag);display:flex;align-items:center;justify-content:center;
+  font-size:36px;box-shadow:0 12px 40px rgba(78,109,245,.45);margin-bottom:22px;
+}
+.hero-title{font-size:34px;font-weight:700;letter-spacing:-.7px;line-height:1.1;margin-bottom:12px}
+.hero-title span{background:var(--ag);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:15px;color:var(--t2);line-height:1.65;margin-bottom:28px}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:36px}
+.pill{
+  display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;
+  padding:7px 14px;border-radius:999px;
+  background:var(--card);border:1px solid var(--bdr);color:var(--t2);
+}
+.pill-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0}
+
+/* ── Sección de instalación ─────────────────────────────── */
+.install-section{animation:fadeUp .5s .08s ease both}
+
+/* ── Tabs (Automático / Manual) ─────────────────────────── */
+.tabs{display:flex;gap:4px;background:rgba(255,255,255,.05);border-radius:14px;padding:4px;margin-bottom:20px}
+.tab-btn{
+  flex:1;padding:9px;border:none;border-radius:10px;
+  font-size:14px;font-weight:600;cursor:pointer;
+  background:none;color:var(--t2);transition:all .2s;
+}
+.tab-btn.active{background:rgba(255,255,255,.10);color:var(--t1)}
+
+/* ── Panel automático (WebUSB) ──────────────────────────── */
+.panel{display:none}
+.panel.active{display:block}
+
+/* ── Steps visuales ─────────────────────────────────────── */
+.vsteps{display:flex;flex-direction:column;gap:0;margin-bottom:20px}
+.vstep{
+  display:flex;align-items:flex-start;gap:14px;padding:14px 0;
+  border-bottom:1px solid var(--bdr);
+}
+.vstep:last-child{border-bottom:none}
+.vstep-num{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;
+  background:rgba(255,255,255,.08);color:var(--t2);
+  transition:all .3s;
+}
+.vstep.done   .vstep-num{background:rgba(34,197,94,.2); color:var(--green)}
+.vstep.active .vstep-num{background:var(--ag);color:#fff;box-shadow:0 0 12px rgba(78,109,245,.5)}
+.vstep.active .vstep-num::after{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#fff;animation:stepPulse 1s ease infinite}
+.vstep-info{}
+.vstep-label{font-size:15px;font-weight:600;margin-bottom:2px;color:var(--t2);transition:color .3s}
+.vstep.active .vstep-label,.vstep.done .vstep-label{color:var(--t1)}
+.vstep-desc{font-size:13px;color:var(--t3);line-height:1.5}
+
+@keyframes stepPulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ── Status box ─────────────────────────────────────────── */
+.status-box{
+  border-radius:var(--r);padding:16px 20px;margin-bottom:16px;
+  font-size:14px;display:none;
+}
+.status-box.show{display:block;animation:fadeUp .2s ease}
+.status-box.loading{background:rgba(78,109,245,.10);border:1px solid rgba(78,109,245,.20);color:#a5b4fc}
+.status-box.ok     {background:rgba(34,197,94,.10); border:1px solid rgba(34,197,94,.20); color:var(--green)}
+.status-box.error  {background:rgba(244,63,94,.10); border:1px solid rgba(244,63,94,.20); color:var(--red)}
+.status-box.warn   {background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.20);color:var(--amber)}
+
+/* ── Progress bar ───────────────────────────────────────── */
+.prog{height:3px;border-radius:2px;background:rgba(255,255,255,.08);margin-top:10px;overflow:hidden}
+.prog-fill{height:100%;background:var(--ag);border-radius:2px;transition:width .4s ease;width:0%}
+
+/* ── Log terminal ───────────────────────────────────────── */
+.log-box{
+  background:#0d0d1a;border:1px solid var(--bdr);border-radius:14px;
+  padding:14px 16px;margin-bottom:16px;
+  font-family:var(--mono);font-size:12px;color:#a5b4fc;
+  max-height:160px;overflow-y:auto;
+  display:none;
+  line-height:1.6;
+}
+.log-box.show{display:block}
+.log-line{margin-bottom:2px}
+.log-line.ok{color:#86efac}
+.log-line.err{color:#fca5a5}
+
+/* ── Botones ────────────────────────────────────────────── */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:16px;border:none;border-radius:var(--r);
+  font-size:16px;font-weight:700;cursor:pointer;
+  transition:transform .15s,opacity .15s,box-shadow .15s;
+}
+.btn:active{transform:scale(.97);opacity:.85}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-primary{background:var(--ag);color:#fff;box-shadow:0 4px 20px rgba(78,109,245,.4)}
+.btn-secondary{background:rgba(255,255,255,.08);color:var(--t1);border:1px solid var(--bdr)}
+.btn-success{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;box-shadow:0 4px 20px rgba(34,197,94,.35)}
+
+/* ── Panel manual ───────────────────────────────────────── */
+.manual-card{
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:var(--r);overflow:hidden;margin-bottom:16px;
+}
+.manual-head{padding:18px 20px 14px;border-bottom:1px solid var(--bdr)}
+.manual-step-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin-bottom:4px}
+.manual-step-title{font-size:16px;font-weight:600}
+.cmd-row{padding:14px 20px;display:flex;align-items:center;gap:10px}
+.cmd-text{
+  flex:1;font-family:var(--mono);font-size:12px;color:#a5b4fc;
+  word-break:break-all;line-height:1.5;
+}
+.btn-copy{
+  flex-shrink:0;padding:8px 16px;border:none;border-radius:10px;
+  background:var(--ag);color:#fff;font-size:13px;font-weight:700;
+  cursor:pointer;transition:transform .15s,opacity .15s;white-space:nowrap;
+}
+.btn-copy:active{transform:scale(.96);opacity:.85}
+.btn-copy.copied{background:linear-gradient(135deg,#22c55e,#16a34a)}
+
+/* ── Requisitos ─────────────────────────────────────────── */
+.req{
+  background:rgba(78,109,245,.07);border:1px solid rgba(78,109,245,.18);
+  border-radius:var(--r);padding:16px 20px;margin-bottom:16px;
+}
+.req-title{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8fa8ff;margin-bottom:10px}
+.req-list{list-style:none;display:flex;flex-direction:column;gap:7px}
+.req-list li{font-size:14px;color:var(--t2);display:flex;align-items:center;gap:8px}
+.req-list li::before{content:'';width:5px;height:5px;border-radius:50%;background:#8fa8ff;flex-shrink:0}
+
+/* ── Footer ─────────────────────────────────────────────── */
+.footer{margin-top:36px;text-align:center;font-size:12px;color:var(--t3);line-height:1.8}
+
+/* ── Toast ──────────────────────────────────────────────── */
+.toast{
+  position:fixed;bottom:28px;left:50%;
+  transform:translateX(-50%) translateY(12px);
+  background:rgba(18,18,32,.97);border:1px solid var(--bdr-h);
+  border-radius:14px;padding:12px 22px;font-size:14px;font-weight:500;
+  backdrop-filter:var(--blur);z-index:999;white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Animaciones ────────────────────────────────────────── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">Vault</div>
+    <span class="beta">Beta</span>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-icon">🔐</div>
+    <h1 class="hero-title">Tu store.<br><span>Sin restricciones.</span></h1>
+    <p class="hero-sub">
+      Instala y gestiona APKs y apps Linux desde tu propio dispositivo.
+      Sin cuentas, sin Play Store, sin rastreo.
+    </p>
+    <div class="pills">
+      <div class="pill"><div class="pill-dot"></div>APKs Android</div>
+      <div class="pill"><div class="pill-dot"></div>Apps Linux</div>
+      <div class="pill"><div class="pill-dot"></div>100% local</div>
+      <div class="pill"><div class="pill-dot"></div>Sin cuenta</div>
+    </div>
+  </div>
+
+  <!-- Sección de instalación -->
+  <div class="install-section">
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('auto',this)">
+        ⚡ Automático (USB)
+      </button>
+      <button class="tab-btn" onclick="switchTab('manual',this)">
+        📋 Manual (Terminal)
+      </button>
+    </div>
+
+    <!-- ══ PANEL AUTOMÁTICO ══ -->
+    <div class="panel active" id="panel-auto">
+
+      <!-- Pasos visuales -->
+      <div class="vsteps" id="vsteps">
+        <div class="vstep" id="step-1">
+          <div class="vstep-num">1</div>
+          <div class="vstep-info">
+            <div class="vstep-label">Habilita Depuración USB</div>
+            <div class="vstep-desc">Ajustes → Acerca del teléfono → toca "Número de compilación" 7 veces → Opciones de desarrollador → Depuración USB</div>
+          </div>
+        </div>
+        <div class="vstep" id="step-2">
+          <div class="vstep-num">2</div>
+          <div class="vstep-info">
+            <div class="vstep-label">Conecta tu teléfono por USB</div>
+            <div class="vstep-desc">Usa un cable USB que transmita datos (no solo carga)</div>
+          </div>
+        </div>
+        <div class="vstep" id="step-3">
+          <div class="vstep-num">3</div>
+          <div class="vstep-info">
+            <div class="vstep-label">Toca "Instalar Vault"</div>
+            <div class="vstep-desc">El navegador pedirá acceso al dispositivo USB</div>
+          </div>
+        </div>
+        <div class="vstep" id="step-4">
+          <div class="vstep-num">4</div>
+          <div class="vstep-info">
+            <div class="vstep-label">Acepta "Confiar en esta PC"</div>
+            <div class="vstep-desc">Aparece una vez en la pantalla de tu teléfono</div>
+          </div>
+        </div>
+        <div class="vstep" id="step-5">
+          <div class="vstep-num">5</div>
+          <div class="vstep-info">
+            <div class="vstep-label">Instalación automática</div>
+            <div class="vstep-desc">Termux + AuroraOS + Vault se instalan solos</div>
+          </div>
+        </div>
+        <div class="vstep" id="step-6">
+          <div class="vstep-num">6</div>
+          <div class="vstep-info">
+            <div class="vstep-label">¡Listo! Vault está en tu teléfono</div>
+            <div class="vstep-desc">Desconecta USB y abre Vault</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="status-box" id="status-box">
+        <span id="status-msg"></span>
+        <div class="prog"><div class="prog-fill" id="prog-fill"></div></div>
+      </div>
+
+      <!-- Log -->
+      <div class="log-box" id="log-box"></div>
+
+      <!-- Botón principal -->
+      <button class="btn btn-primary" id="btn-install" onclick="startInstall()">
+        ⚡ Instalar Vault
+      </button>
+
+      <!-- Botón de éxito (oculto hasta completar) -->
+      <button class="btn btn-success" id="btn-done" style="display:none;margin-top:12px" onclick="showDone()">
+        ✓ Ver instrucciones finales
+      </button>
+
+      <!-- WebUSB no soportado -->
+      <div class="status-box warn" id="no-webusb" style="display:none">
+        ⚠ Tu navegador no soporta WebUSB.
+        Usa <strong>Chrome</strong> o <strong>Edge</strong> en escritorio,
+        o usa la pestaña "Manual" para instalar por terminal.
+      </div>
+
+    </div><!-- /panel-auto -->
+
+    <!-- ══ PANEL MANUAL ══ -->
+    <div class="panel" id="panel-manual">
+
+      <div class="manual-card">
+        <div class="manual-head">
+          <div class="manual-step-label">Paso 1</div>
+          <div class="manual-step-title">Instala ADB en tu PC</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-text">
+            # macOS:<br>brew install android-platform-tools<br><br>
+            # Windows: descarga Platform Tools de developer.android.com<br><br>
+            # Linux:<br>sudo apt install adb
+          </div>
+        </div>
+      </div>
+
+      <div class="manual-card">
+        <div class="manual-head">
+          <div class="manual-step-label">Paso 2</div>
+          <div class="manual-step-title">Conecta y verifica</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-text" id="cmd-verify">adb devices</div>
+          <button class="btn-copy" onclick="copyCmd('adb devices',this)">Copiar</button>
+        </div>
+      </div>
+
+      <div class="manual-card">
+        <div class="manual-head">
+          <div class="manual-step-label">Paso 3</div>
+          <div class="manual-step-title">Instala Termux</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-text" id="cmd-termux">adb install termux.apk</div>
+          <button class="btn-copy" onclick="copyCmd('adb install termux.apk',this)">Copiar</button>
+        </div>
+      </div>
+
+      <div class="manual-card">
+        <div class="manual-head">
+          <div class="manual-step-label">Paso 4</div>
+          <div class="manual-step-title">Instala Vault desde Termux</div>
+        </div>
+        <div class="cmd-row">
+          <div class="cmd-text" id="cmd-vault">pkg install -y curl && curl -fsSL https://vault-app.pages.dev/install.sh | bash</div>
+          <button class="btn-copy" onclick="copyCmd('pkg install -y curl && curl -fsSL https://vault-app.pages.dev/install.sh | bash',this)">Copiar</button>
+        </div>
+      </div>
+
+    </div><!-- /panel-manual -->
+
+    <!-- Requisitos -->
+    <div class="req" style="margin-top:16px">
+      <div class="req-title">Requisitos</div>
+      <ul class="req-list">
+        <li>Android 7.0+ (SDK 24+)</li>
+        <li>Cable USB con transferencia de datos</li>
+        <li>Chrome o Edge (para instalación automática)</li>
+        <li>~300 MB de espacio libre</li>
+        <li>Depuración USB habilitada</li>
+      </ul>
+    </div>
+
+  </div><!-- /install-section -->
+
+  <div class="footer">
+    Vault es software experimental en fase beta.<br>
+    Tú traes tus apps — Vault solo las gestiona.
+  </div>
+
+</div><!-- /wrap -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="adb.js"></script>
+<script src="installer.js"></script>
+<script>
+
+// ── Verificar WebUSB ──────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  if (!navigator.usb) {
+    document.getElementById('no-webusb').style.display = 'block';
+    document.getElementById('btn-install').disabled = true;
+  }
+});
+
+// ── Tabs ──────────────────────────────────────────────────
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+}
+
+// ── Estado de pasos ───────────────────────────────────────
+let currentStep = 0;
+
+function setStep(n) {
+  currentStep = n;
+  for (let i = 1; i <= 6; i++) {
+    const el = document.getElementById('step-' + i);
+    el.classList.remove('active', 'done');
+    if (i < n)  el.classList.add('done');
+    if (i === n) el.classList.add('active');
+  }
+}
+
+function setStatus(msg, type = 'loading') {
+  const box  = document.getElementById('status-box');
+  const msgEl = document.getElementById('status-msg');
+  const fill  = document.getElementById('prog-fill');
+  box.className = 'status-box show ' + type;
+  msgEl.textContent = msg;
+
+  // Animación de progreso según tipo
+  if (type === 'loading') fill.style.width = '60%';
+  if (type === 'ok')      fill.style.width = '100%';
+  if (type === 'error')   fill.style.width = '100%';
+}
+
+function addLog(msg) {
+  const box  = document.getElementById('log-box');
+  const line = document.createElement('div');
+  line.className = 'log-line' +
+    (msg.includes('✓') || msg.startsWith('OK') ? ' ok' : '') +
+    (msg.includes('Error') || msg.includes('✗') ? ' err' : '');
+  line.textContent = msg;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+  box.classList.add('show');
+}
+
+// ── Instalar ──────────────────────────────────────────────
+async function startInstall() {
+  const btn = document.getElementById('btn-install');
+  btn.disabled = true;
+  btn.textContent = 'Instalando...';
+
+  const result = await Installer.install(
+    // Log
+    msg => addLog(msg),
+    // Status
+    (msg, type) => setStatus(msg, type),
+    // Step
+    (n, label) => setStep(n)
+  );
+
+  if (result.success) {
+    btn.style.display = 'none';
+    document.getElementById('btn-done').style.display = 'flex';
+    setStep(6);
+    toast('✓ Vault instalado correctamente');
+  } else {
+    btn.disabled = false;
+    btn.textContent = '⚡ Reintentar';
+    setStep(0);
+  }
+}
+
+// ── Instrucciones finales ─────────────────────────────────
+function showDone() {
+  document.getElementById('status-box').className = 'status-box show ok';
+  document.getElementById('status-msg').textContent =
+    '✓ Vault instalado. Abre Termux en tu teléfono — Vault se iniciará automáticamente. ' +
+    'Para el ícono en pantalla: instala Termux:Widget desde F-Droid y añade el widget a tu launcher.';
+}
+
+// ── Copy ──────────────────────────────────────────────────
+function copyCmd(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓';
+    btn.classList.add('copied');
+    toast('Copiado al portapapeles');
+    setTimeout(() => {
+      btn.textContent = orig;
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+// ── Toast ─────────────────────────────────────────────────
+function toast(msg, dur = 2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+</script>
+</body>
+</html>
