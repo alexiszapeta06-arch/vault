@@ -58,6 +58,9 @@ body::before{
 
 /* ── Hero ───────────────────────────────────────────────── */
 .hero{margin-bottom:36px;animation:fadeUp .5s ease both}
+.hero-icon-img{
+  margin-bottom:22px;
+}
 .hero-icon{
   width:76px;height:76px;border-radius:20px;
   background:var(--ag);display:flex;align-items:center;justify-content:center;
@@ -190,6 +193,41 @@ body::before{
 /* ── Footer ─────────────────────────────────────────────── */
 .footer{margin-top:36px;text-align:center;font-size:12px;color:var(--t3);line-height:1.8}
 
+/* ── Phase cards ────────────────────────────────────────── */
+.phase-card{
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:var(--r);padding:20px;margin-bottom:16px;
+}
+.phase-header{
+  display:flex;align-items:center;gap:14px;margin-bottom:16px;
+}
+.phase-num{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:800;color:#fff;
+  background:var(--ag);box-shadow:0 4px 14px rgba(78,109,245,.4);
+}
+.phase-title{font-size:17px;font-weight:700}
+.phase-sub{font-size:13px;color:var(--t2);margin-top:2px}
+
+/* ── Cmd card ────────────────────────────────────────────── */
+.cmd-card{
+  background:rgba(0,0,0,.3);border:1px solid var(--bdr);
+  border-radius:var(--r);padding:14px 16px;
+  display:flex;align-items:center;gap:12px;
+}
+.cmd-text-box{
+  flex:1;font-family:var(--mono);font-size:12px;
+  color:#a5b4fc;word-break:break-all;line-height:1.5;
+}
+.btn-copy-cmd{
+  flex-shrink:0;padding:9px 18px;border:none;
+  border-radius:10px;background:var(--ag);color:#fff;
+  font-size:13px;font-weight:700;cursor:pointer;
+  transition:transform .15s,opacity .15s;white-space:nowrap;
+}
+.btn-copy-cmd:active{transform:scale(.96);opacity:.85}
+
 /* ── Download buttons ──────────────────────────────────── */
 .dl-section{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
 .btn-dl{
@@ -276,67 +314,73 @@ body::before{
   <!-- Sección de instalación -->
   <div class="install-section">
 
-    <!-- Botones de descarga -->
-    <div class="dl-section">
+    <!-- PASO 1 -->
+    <div class="phase-card">
+      <div class="phase-header">
+        <div class="phase-num">1</div>
+        <div class="phase-info">
+          <div class="phase-title">Instalar Termux</div>
+          <div class="phase-sub">Via ADB desde tu PC — un clic</div>
+        </div>
+      </div>
 
-      <!-- Windows -->
-      <a class="btn-dl" href="install-windows.bat" download>
+      <div class="steps-card" style="margin:0 0 16px">
+        <div class="step-row">
+          <div class="step-num">1</div>
+          <div class="step-info">
+            <div class="step-label">Activa Depuración USB</div>
+            <div class="step-desc">Ajustes → Acerca del teléfono → toca Número de compilación 7 veces → Opciones de desarrollador → Depuración USB ON</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">2</div>
+          <div class="step-info">
+            <div class="step-label">Descarga e instala</div>
+            <div class="step-desc">Conecta el cable USB, descarga el instalador y dale doble clic</div>
+          </div>
+        </div>
+      </div>
+
+      <a class="btn-dl" href="instalar.bat" download>
         <div class="btn-dl-icon">🪟</div>
         <div class="btn-dl-info">
-          <div class="btn-dl-title">Windows</div>
-          <div class="btn-dl-sub">Doble clic para instalar</div>
+          <div class="btn-dl-title">Descargar instalador Windows</div>
+          <div class="btn-dl-sub">instalar.bat — doble clic para instalar Termux</div>
         </div>
         <div class="btn-dl-arrow">↓</div>
       </a>
-
-      <!-- Mac -->
-      <a class="btn-dl" href="install-mac-linux.sh" download>
-        <div class="btn-dl-icon">🍎</div>
-        <div class="btn-dl-info">
-          <div class="btn-dl-title">Mac / Linux</div>
-          <div class="btn-dl-sub">bash install-mac-linux.sh</div>
-        </div>
-        <div class="btn-dl-arrow">↓</div>
-      </a>
-
     </div>
 
-    <!-- Pasos -->
-    <div class="steps-card">
-      <div class="step-row">
-        <div class="step-num">1</div>
-        <div class="step-info">
-          <div class="step-label">Activa Depuración USB</div>
-          <div class="step-desc">Ajustes → Acerca del teléfono → toca "Número de compilación" 7 veces → Opciones de desarrollador → Depuración USB</div>
+    <!-- PASO 2 -->
+    <div class="phase-card">
+      <div class="phase-header">
+        <div class="phase-num">2</div>
+        <div class="phase-info">
+          <div class="phase-title">Instalar AuroraOS y Vault</div>
+          <div class="phase-sub">Pega este comando en Termux</div>
         </div>
       </div>
-      <div class="step-row">
-        <div class="step-num">2</div>
-        <div class="step-info">
-          <div class="step-label">Descarga el instalador</div>
-          <div class="step-desc">Toca el botón de tu sistema operativo arriba</div>
+
+      <div class="steps-card" style="margin:0 0 16px">
+        <div class="step-row">
+          <div class="step-num">1</div>
+          <div class="step-info">
+            <div class="step-label">Abre Termux en tu teléfono</div>
+            <div class="step-desc">Espera que termine de inicializar (puede tardar 30 segundos la primera vez)</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">2</div>
+          <div class="step-info">
+            <div class="step-label">Copia y pega el comando</div>
+            <div class="step-desc">Toca el botón Copiar, luego mantén presionado en Termux y pega</div>
+          </div>
         </div>
       </div>
-      <div class="step-row">
-        <div class="step-num">3</div>
-        <div class="step-info">
-          <div class="step-label">Conecta tu teléfono y ejecuta</div>
-          <div class="step-desc">Windows: doble clic en el .bat — Mac/Linux: bash install-mac-linux.sh</div>
-        </div>
-      </div>
-      <div class="step-row">
-        <div class="step-num">4</div>
-        <div class="step-info">
-          <div class="step-label">Acepta "Confiar en esta PC"</div>
-          <div class="step-desc">Aparece una sola vez en tu teléfono</div>
-        </div>
-      </div>
-      <div class="step-row">
-        <div class="step-num">5</div>
-        <div class="step-info">
-          <div class="step-label">¡Listo! Vault se instala solo</div>
-          <div class="step-desc">Termux + AuroraOS + Vault quedan instalados automáticamente</div>
-        </div>
+
+      <div class="cmd-card">
+        <div class="cmd-text-box" id="vault-cmd">pkg install -y curl && curl -fsSL https://alexiszapeta06-arch.github.io/vault/install.sh | bash</div>
+        <button class="btn-copy-cmd" onclick="copyVaultCmd()">Copiar</button>
       </div>
     </div>
 
@@ -464,10 +508,25 @@ function copyCmd(text, btn) {
     btn.textContent = '✓';
     btn.classList.add('copied');
     toast('Copiado al portapapeles');
-    setTimeout(() => {
-      btn.textContent = orig;
-      btn.classList.remove('copied');
-    }, 2000);
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function copyVaultCmd() {
+  const cmd = document.getElementById('vault-cmd').textContent.trim();
+  navigator.clipboard.writeText(cmd).then(() => {
+    const btn = document.querySelector('.btn-copy-cmd');
+    btn.textContent = '✓ Copiado';
+    toast('Comando copiado — pégalo en Termux');
+    setTimeout(() => btn.textContent = 'Copiar', 2500);
+  }).catch(() => {
+    // Fallback: seleccionar texto
+    const el = document.getElementById('vault-cmd');
+    const range = document.createRange();
+    range.selectNode(el);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    toast('Selecciona y copia el comando');
   });
 }
 
