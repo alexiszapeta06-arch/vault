@@ -341,60 +341,48 @@ const ADB = (() => {
     return output;
   }
 
-  // ── Push archivo al dispositivo ──────────────────────────
+  // ── Push archivo via base64 (compatible con MIUI) ────────
+  // sync: está bloqueado en MIUI. Alternativa: enviar el archivo
+  // codificado en base64 via exec: y decodificarlo en el teléfono
+  // con 'base64 -d' que viene en todos los Android.
   async function push(data, remotePath, onProgress) {
-    log(`Enviando ${remotePath} (${(data.byteLength / 1024 / 1024).toFixed(1)} MB)...`);
+    const mb = (data.byteLength / 1024 / 1024).toFixed(1);
+    log(`Enviando ${remotePath} (${mb} MB) via base64...`);
 
-    const stream = await openStream('sync:');
-    const remoteId = stream.remoteId;
+    const bytes  = new Uint8Array(data);
+    const CHUNK  = 48 * 1024; // 48KB → ~64KB base64 por chunk
+    const total  = bytes.length;
+    let   offset = 0;
+    let   first  = true;
 
-    // SEND command
-    const pathPerm  = `${remotePath},0644`;
-    const pathBytes = encode(pathPerm);
-    const sendHdr   = new Uint8Array(8 + pathBytes.length);
-    sendHdr.set(encode('SEND'));
-    new DataView(sendHdr.buffer).setUint32(4, pathBytes.length, true);
-    sendHdr.set(pathBytes, 8);
+    // Limpiar archivo destino
+    await shell(`rm -f "${remotePath}"`);
 
-    await sendSync(stream, sendHdr);
+    while (offset < total) {
+      const end   = Math.min(offset + CHUNK, total);
+      const slice = bytes.slice(offset, end);
 
-    // Enviar datos en chunks
-    const CHUNK = 64 * 1024;
-    let offset = 0;
-    while (offset < data.byteLength) {
-      const end   = Math.min(offset + CHUNK, data.byteLength);
-      const chunk = data.slice(offset, end);
-      const hdr   = new Uint8Array(8);
-      hdr.set(encode('DATA'));
-      new DataView(hdr.buffer).setUint32(4, chunk.byteLength, true);
+      // Codificar chunk en base64
+      let binary = '';
+      for (let i = 0; i < slice.length; i++) {
+        binary += String.fromCharCode(slice[i]);
+      }
+      const b64 = btoa(binary);
 
-      const packet = new Uint8Array(hdr.byteLength + chunk.byteLength);
-      packet.set(hdr);
-      packet.set(new Uint8Array(chunk), 8);
-      await sendSync(stream, packet);
+      // Append al archivo en el teléfono
+      const op  = first ? '>' : '>>';
+      const cmd = `echo '${b64}' | base64 -d ${op} "${remotePath}"`;
+      await shell(cmd);
 
-      offset = end;
-      if (onProgress) onProgress(Math.round((offset / data.byteLength) * 100));
+      first   = false;
+      offset  = end;
+      const pct = Math.round((offset / total) * 100);
+      if (onProgress) onProgress(pct);
+      if (pct % 10 === 0) log(`Enviando... ${pct}%`);
     }
-
-    // DONE
-    const done = new Uint8Array(8);
-    done.set(encode('DONE'));
-    new DataView(done.buffer).setUint32(4, Math.floor(Date.now() / 1000), true);
-    await sendSync(stream, done);
-
-    // Esperar OKAY
-    const resp = await recv();
-    await closeStream(stream);
 
     log(`✓ ${remotePath} enviado`);
     return true;
-  }
-
-  async function sendSync(stream, data) {
-    await send(CMD.WRTE, stream.localId, stream.remoteId, data);
-    const ack = await recv();
-    if (ack.cmd !== CMD.OKAY) throw new Error('Sync OKAY esperado');
   }
 
   async function closeStream(stream) {
@@ -407,7 +395,7 @@ const ADB = (() => {
 
     const tmpPath = `/data/local/tmp/${name}`;
 
-    // 1. Push APK al dispositivo
+    // 1. Push APK via base64
     await push(apkData, tmpPath, p => {
       if (onProgress) onProgress('push', p);
     });
