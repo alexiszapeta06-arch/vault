@@ -438,14 +438,15 @@ const ADB = (() => {
       } catch(e2) { /* ignorar */ }
     }
 
-    // 3. Limpiar (opcional — no fallar si rm no funciona)
+    // 3. Limpiar tmp — completamente opcional, nunca falla la instalación
     if (onProgress) onProgress('cleanup', 0);
-    try {
-      await shell(`rm -f "${tmpPath}"`);
-    } catch(e) {
-      log('Limpieza omitida (no crítico)');
-    }
+    // No usar shell() para rm — si todos los métodos dan timeout
+    // simplemente seguimos. El archivo tmp se limpia solo eventualmente.
+    Promise.resolve().then(async () => {
+      try { await shell(`rm -f "${tmpPath}"`); } catch(e) { /* ignorar */ }
+    });
 
+    // Considerar éxito si pm dijo Success O si Termux está en el sistema
     const success = result.includes('Success') || result.includes('com.termux');
     if (!success) throw new Error(`Instalación falló: ${result.trim() || 'sin respuesta de pm'}`);
 
