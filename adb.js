@@ -313,6 +313,11 @@ const ADB = (() => {
     throw new Error(`No se pudo abrir servicio: ${service}`);
   }
 
+  // ── Shell seguro — nunca lanza, devuelve '' si falla ────
+  async function shellSafe(cmd) {
+    try { return await shell(cmd); } catch(e) { return ''; }
+  }
+
   // ── Ejecutar shell command ───────────────────────────────
   // Prueba múltiples servicios en orden de compatibilidad.
   // Cada dispositivo/ROM soporta distintos servicios ADB.
@@ -440,11 +445,7 @@ const ADB = (() => {
 
     // 3. Limpiar tmp — completamente opcional, nunca falla la instalación
     if (onProgress) onProgress('cleanup', 0);
-    // No usar shell() para rm — si todos los métodos dan timeout
-    // simplemente seguimos. El archivo tmp se limpia solo eventualmente.
-    Promise.resolve().then(async () => {
-      try { await shell(`rm -f "${tmpPath}"`); } catch(e) { /* ignorar */ }
-    });
+    await shellSafe(`rm -f "${tmpPath}"`);
 
     // Considerar éxito si pm dijo Success O si Termux está en el sistema
     const success = result.includes('Success') || result.includes('com.termux');
@@ -469,7 +470,7 @@ const ADB = (() => {
   }
 
   // ── API pública ──────────────────────────────────────────
-  return { connect, installAPK, shell, push, disconnect,
+  return { connect, installAPK, shell, shellSafe, push, disconnect,
            get connected() { return connected; } };
 
 })();
