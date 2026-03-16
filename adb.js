@@ -292,20 +292,31 @@ const ADB = (() => {
   }
 
   // ── Abrir stream de servicio ─────────────────────────────
+  // Algunos dispositivos (Xiaomi, Samsung) envían mensajes extras
+  // tras la reconexión antes del OKAY. Los descartamos hasta obtenerlo.
   async function openStream(service) {
     const id = localId++;
     await send(CMD.OPEN, id, 0, service + '\0');
 
-    const resp = await recv();
-    if (resp.cmd !== CMD.OKAY) {
-      throw new Error(`No se pudo abrir servicio: ${service}`);
+    // Esperar OKAY descartando mensajes intermedios (max 10 intentos)
+    for (let i = 0; i < 10; i++) {
+      const resp = await recvWithTimeout(5000);
+      if (!resp) throw new Error(`Timeout abriendo servicio: ${service}`);
+      if (resp.cmd === CMD.OKAY) {
+        return { localId: id, remoteId: resp.arg0 };
+      }
+      if (resp.cmd === CMD.CLSE) {
+        throw new Error(`Servicio cerrado: ${service}`);
+      }
+      // CNXN u otro mensaje — descartar y seguir esperando
     }
-    return { localId: id, remoteId: resp.arg0 };
+    throw new Error(`No se pudo abrir servicio: ${service}`);
   }
 
   // ── Ejecutar shell command ───────────────────────────────
   async function shell(cmd, onData) {
     log(`$ ${cmd}`);
+    // Usar shell: con -x para compatibilidad máxima con Android
     const stream = await openStream(`shell:${cmd}`);
     let output = '';
 
