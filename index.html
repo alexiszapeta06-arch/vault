@@ -314,74 +314,74 @@ body::before{
   <!-- Sección de instalación -->
   <div class="install-section">
 
-    <!-- PASO 1 -->
+    <!-- PASO 1: Tools -->
     <div class="phase-card">
       <div class="phase-header">
         <div class="phase-num">1</div>
         <div class="phase-info">
-          <div class="phase-title">Instalar Termux</div>
-          <div class="phase-sub">Via ADB desde tu PC — un clic</div>
+          <div class="phase-title">Descargar herramientas ADB</div>
+          <div class="phase-sub">Solo la primera vez — incluye adb.exe y el instalador</div>
         </div>
       </div>
-
       <div class="steps-card" style="margin:0 0 16px">
         <div class="step-row">
           <div class="step-num">1</div>
           <div class="step-info">
-            <div class="step-label">Activa Depuración USB</div>
-            <div class="step-desc">Ajustes → Acerca del teléfono → toca Número de compilación 7 veces → Opciones de desarrollador → Depuración USB ON</div>
+            <div class="step-label">Descarga el paquete de herramientas</div>
+            <div class="step-desc">Incluye adb.exe, las DLLs necesarias y termux.apk</div>
           </div>
         </div>
         <div class="step-row">
           <div class="step-num">2</div>
           <div class="step-info">
-            <div class="step-label">Descarga e instala</div>
-            <div class="step-desc">Conecta el cable USB, descarga el instalador y dale doble clic</div>
+            <div class="step-label">Descomprime el ZIP</div>
+            <div class="step-desc">Extrae todos los archivos en una carpeta de tu PC</div>
           </div>
         </div>
       </div>
-
-      <a class="btn-dl" href="instalar.bat" download>
-        <div class="btn-dl-icon">🪟</div>
+      <a class="btn-dl" href="https://www.mediafire.com/file/guwbzfnpdbm21mu/adb.exe.zip/file" target="_blank">
+        <div class="btn-dl-icon">🔧</div>
         <div class="btn-dl-info">
-          <div class="btn-dl-title">Descargar instalador Windows</div>
-          <div class="btn-dl-sub">instalar.bat — doble clic para instalar Termux</div>
+          <div class="btn-dl-title">Descargar ADB Tools</div>
+          <div class="btn-dl-sub">adb.exe.zip — incluye todo lo necesario</div>
         </div>
         <div class="btn-dl-arrow">↓</div>
       </a>
     </div>
 
-    <!-- PASO 2 -->
+    <!-- PASO 2: Instalar -->
     <div class="phase-card">
       <div class="phase-header">
         <div class="phase-num">2</div>
         <div class="phase-info">
-          <div class="phase-title">Instalar AuroraOS y Vault</div>
-          <div class="phase-sub">Pega este comando en Termux</div>
+          <div class="phase-title">Instalar Vault</div>
+          <div class="phase-sub">Descarga el instalador y ponlo en la misma carpeta</div>
         </div>
       </div>
-
       <div class="steps-card" style="margin:0 0 16px">
         <div class="step-row">
           <div class="step-num">1</div>
           <div class="step-info">
-            <div class="step-label">Abre Termux en tu teléfono</div>
-            <div class="step-desc">Espera que termine de inicializar (puede tardar 30 segundos la primera vez)</div>
+            <div class="step-label">Activa Depuracion USB</div>
+            <div class="step-desc">Ajustes - Acerca del telefono - toca Numero de compilacion 7 veces - Opciones de desarrollador - Depuracion USB ON</div>
           </div>
         </div>
         <div class="step-row">
           <div class="step-num">2</div>
           <div class="step-info">
-            <div class="step-label">Copia y pega el comando</div>
-            <div class="step-desc">Toca el botón Copiar, luego mantén presionado en Termux y pega</div>
+            <div class="step-label">Descarga instalar.bat en la misma carpeta del ZIP</div>
+            <div class="step-desc">Conecta el cable USB y dale doble clic — instala todo automaticamente</div>
           </div>
         </div>
       </div>
-
-      <div class="cmd-card">
-        <div class="cmd-text-box" id="vault-cmd">pkg install -y curl && curl -fsSL https://alexiszapeta06-arch.github.io/vault/install.sh | bash</div>
-        <button class="btn-copy-cmd" onclick="copyVaultCmd()">Copiar</button>
-      </div>
+      <a class="btn-dl" href="instalar.bat" download>
+        <div class="btn-dl-icon">⚡</div>
+        <div class="btn-dl-info">
+          <div class="btn-dl-title">Descargar instalar.bat</div>
+          <div class="btn-dl-sub">Doble clic — instala Termux + AuroraOS + Vault</div>
+        </div>
+        <div class="btn-dl-arrow">↓</div>
+      </a>
     </div>
 
     <!-- Requisitos -->
