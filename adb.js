@@ -294,13 +294,13 @@ const ADB = (() => {
   // ── Abrir stream de servicio ─────────────────────────────
   // Algunos dispositivos (Xiaomi, Samsung) envían mensajes extras
   // tras la reconexión antes del OKAY. Los descartamos hasta obtenerlo.
-  async function openStream(service) {
+  async function openStream(service, timeoutMs = 8000) {
     const id = localId++;
     await send(CMD.OPEN, id, 0, service + '\0');
 
     // Esperar OKAY descartando mensajes intermedios (max 10 intentos)
     for (let i = 0; i < 10; i++) {
-      const resp = await recvWithTimeout(5000);
+      const resp = await recvWithTimeout(timeoutMs);
       if (!resp) throw new Error(`Timeout abriendo servicio: ${service}`);
       if (resp.cmd === CMD.OKAY) {
         return { localId: id, remoteId: resp.arg0 };
@@ -314,17 +314,36 @@ const ADB = (() => {
   }
 
   // ── Ejecutar shell command ───────────────────────────────
-  // Intenta exec-out primero (más compatible con MIUI/Android 10+)
-  // Si falla, usa shell: clásico.
+  // Prueba múltiples servicios en orden de compatibilidad.
+  // Cada dispositivo/ROM soporta distintos servicios ADB.
   async function shell(cmd, onData) {
     log(`$ ${cmd}`);
-    let stream;
-    // exec-out funciona mejor en Xiaomi/MIUI
-    try {
-      stream = await openStream(`exec:${cmd}`);
-    } catch(e) {
-      stream = await openStream(`shell,v2,TERM=xterm:${cmd}`);
+
+    // Servicios a intentar en orden
+    const services = [
+      `exec:${cmd}`,                        // Android 8+ estándar
+      `shell:${cmd}`,                       // ADB clásico
+      `shell,v2,TERM=xterm-256color:${cmd}`,// Shell v2 (Pixel/stock)
+      `shell,v2:${cmd}`,                    // Shell v2 minimal
+    ];
+
+    let stream = null;
+    let lastErr = null;
+
+    for (const svc of services) {
+      try {
+        stream = await openStream(svc);
+        break; // Funcionó
+      } catch(e) {
+        lastErr = e;
+        stream  = null;
+      }
     }
+
+    if (!stream) {
+      throw new Error(`No se pudo ejecutar comando en este dispositivo: ${lastErr?.message}`);
+    }
+
     let output = '';
 
     while (true) {
@@ -400,18 +419,35 @@ const ADB = (() => {
       if (onProgress) onProgress('push', p);
     });
 
-    // 2. Instalar con pm
+    // 2. Instalar con pm install
     if (onProgress) onProgress('install', 0);
-    const result = await shell(
-      `pm install -r -t -g "${tmpPath}"`,
-      chunk => log(chunk.trim())
-    );
+    let result = '';
+    try {
+      result = await shell(`pm install -r -t -g "${tmpPath}"`,
+        chunk => log(chunk.trim())
+      );
+    } catch(e) {
+      // pm install puede tardar mucho — si hay timeout verificar si se instaló
+      log(`pm install: ${e.message} — verificando si se instaló...`);
+      try {
+        const check = await shell(`pm list packages | grep com.termux`);
+        if (check.includes('com.termux')) {
+          result = 'Success';
+          log('✓ Termux encontrado instalado');
+        }
+      } catch(e2) { /* ignorar */ }
+    }
 
-    // 3. Limpiar
-    await shell(`rm -f "${tmpPath}"`);
+    // 3. Limpiar (opcional — no fallar si rm no funciona)
+    if (onProgress) onProgress('cleanup', 0);
+    try {
+      await shell(`rm -f "${tmpPath}"`);
+    } catch(e) {
+      log('Limpieza omitida (no crítico)');
+    }
 
-    const success = result.includes('Success');
-    if (!success) throw new Error(`Instalación falló: ${result.trim()}`);
+    const success = result.includes('Success') || result.includes('com.termux');
+    if (!success) throw new Error(`Instalación falló: ${result.trim() || 'sin respuesta de pm'}`);
 
     if (onProgress) onProgress('install', 100);
     log(`✓ ${name} instalado`);
