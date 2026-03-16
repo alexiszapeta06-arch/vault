@@ -314,10 +314,17 @@ const ADB = (() => {
   }
 
   // ── Ejecutar shell command ───────────────────────────────
+  // Intenta exec-out primero (más compatible con MIUI/Android 10+)
+  // Si falla, usa shell: clásico.
   async function shell(cmd, onData) {
     log(`$ ${cmd}`);
-    // Usar shell: con -x para compatibilidad máxima con Android
-    const stream = await openStream(`shell:${cmd}`);
+    let stream;
+    // exec-out funciona mejor en Xiaomi/MIUI
+    try {
+      stream = await openStream(`exec:${cmd}`);
+    } catch(e) {
+      stream = await openStream(`shell,v2,TERM=xterm:${cmd}`);
+    }
     let output = '';
 
     while (true) {
