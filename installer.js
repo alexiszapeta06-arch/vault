@@ -291,6 +291,7 @@ echo ""
       await ADB.installAPK(termuxData, 'termux.apk', (phase, p) => {
         if (phase === 'push')    status(`Enviando Termux al dispositivo... ${p}%`, 'loading');
         if (phase === 'install') status('Instalando Termux...', 'loading');
+        if (phase === 'cleanup') status('Finalizando instalación...', 'loading');
       });
 
       status('✓ Termux instalado', 'ok');
