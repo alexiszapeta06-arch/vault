@@ -256,16 +256,10 @@ echo ""
       await ADB.connect(log);
       status('✓ Dispositivo conectado', 'ok');
 
-      // Verificar que ADB funciona
-      const model = await ADB.shell('getprop ro.product.model');
-      log(`Dispositivo: ${model.trim()}`);
-      const sdk = await ADB.shell('getprop ro.build.version.sdk');
-      log(`Android SDK: ${sdk.trim()}`);
-
-      const sdkNum = parseInt(sdk.trim());
-      if (sdkNum < 24) {
-        throw new Error('Android 7.0+ requerido (SDK 24+)');
-      }
+      // Verificación de dispositivo omitida — shell directo no disponible
+      // en algunos dispositivos MIUI/Xiaomi via WebUSB.
+      // La conexión ADB ya fue verificada en el paso de autenticación.
+      log('Dispositivo conectado y listo');
 
       // ── PASO 2: Descargar Termux ──────────────────────
       step(2, 'Descargando Termux');
