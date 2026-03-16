@@ -190,6 +190,49 @@ body::before{
 /* ── Footer ─────────────────────────────────────────────── */
 .footer{margin-top:36px;text-align:center;font-size:12px;color:var(--t3);line-height:1.8}
 
+/* ── Download buttons ──────────────────────────────────── */
+.dl-section{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+.btn-dl{
+  display:flex;align-items:center;gap:16px;
+  padding:18px 20px;
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:var(--r);
+  text-decoration:none;color:var(--t1);
+  transition:background .2s,border-color .2s,transform .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn-dl:hover{background:var(--card-h);border-color:var(--accent)}
+.btn-dl:active{transform:scale(.98)}
+.btn-dl-icon{font-size:32px;flex-shrink:0}
+.btn-dl-info{flex:1}
+.btn-dl-title{font-size:17px;font-weight:700}
+.btn-dl-sub{font-size:13px;color:var(--t2);margin-top:3px;font-family:var(--mono)}
+.btn-dl-arrow{
+  font-size:22px;font-weight:700;
+  background:var(--ag);-webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;background-clip:text;
+}
+
+/* ── Steps card ──────────────────────────────────────────── */
+.steps-card{
+  background:var(--card);border:1px solid var(--bdr);
+  border-radius:var(--r);margin-bottom:20px;overflow:hidden;
+}
+.step-row{
+  display:flex;align-items:flex-start;gap:14px;
+  padding:14px 18px;border-bottom:1px solid var(--bdr);
+}
+.step-row:last-child{border-bottom:none}
+.step-num{
+  width:26px;height:26px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:#fff;
+  background:var(--ag);margin-top:1px;
+}
+.step-info{}
+.step-label{font-size:15px;font-weight:600;margin-bottom:3px}
+.step-desc{font-size:13px;color:var(--t2);line-height:1.5}
+
 /* ── Toast ──────────────────────────────────────────────── */
 .toast{
   position:fixed;bottom:28px;left:50%;
@@ -233,144 +276,69 @@ body::before{
   <!-- Sección de instalación -->
   <div class="install-section">
 
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab('auto',this)">
-        ⚡ Automático (USB)
-      </button>
-      <button class="tab-btn" onclick="switchTab('manual',this)">
-        📋 Manual (Terminal)
-      </button>
+    <!-- Botones de descarga -->
+    <div class="dl-section">
+
+      <!-- Windows -->
+      <a class="btn-dl" href="install-windows.bat" download>
+        <div class="btn-dl-icon">🪟</div>
+        <div class="btn-dl-info">
+          <div class="btn-dl-title">Windows</div>
+          <div class="btn-dl-sub">Doble clic para instalar</div>
+        </div>
+        <div class="btn-dl-arrow">↓</div>
+      </a>
+
+      <!-- Mac -->
+      <a class="btn-dl" href="install-mac-linux.sh" download>
+        <div class="btn-dl-icon">🍎</div>
+        <div class="btn-dl-info">
+          <div class="btn-dl-title">Mac / Linux</div>
+          <div class="btn-dl-sub">bash install-mac-linux.sh</div>
+        </div>
+        <div class="btn-dl-arrow">↓</div>
+      </a>
+
     </div>
 
-    <!-- ══ PANEL AUTOMÁTICO ══ -->
-    <div class="panel active" id="panel-auto">
-
-      <!-- Pasos visuales -->
-      <div class="vsteps" id="vsteps">
-        <div class="vstep" id="step-1">
-          <div class="vstep-num">1</div>
-          <div class="vstep-info">
-            <div class="vstep-label">Habilita Depuración USB</div>
-            <div class="vstep-desc">Ajustes → Acerca del teléfono → toca "Número de compilación" 7 veces → Opciones de desarrollador → Depuración USB</div>
-          </div>
-        </div>
-        <div class="vstep" id="step-2">
-          <div class="vstep-num">2</div>
-          <div class="vstep-info">
-            <div class="vstep-label">Conecta tu teléfono por USB</div>
-            <div class="vstep-desc">Usa un cable USB que transmita datos (no solo carga)</div>
-          </div>
-        </div>
-        <div class="vstep" id="step-3">
-          <div class="vstep-num">3</div>
-          <div class="vstep-info">
-            <div class="vstep-label">Toca "Instalar Vault"</div>
-            <div class="vstep-desc">El navegador pedirá acceso al dispositivo USB</div>
-          </div>
-        </div>
-        <div class="vstep" id="step-4">
-          <div class="vstep-num">4</div>
-          <div class="vstep-info">
-            <div class="vstep-label">Acepta "Confiar en esta PC"</div>
-            <div class="vstep-desc">Aparece una vez en la pantalla de tu teléfono</div>
-          </div>
-        </div>
-        <div class="vstep" id="step-5">
-          <div class="vstep-num">5</div>
-          <div class="vstep-info">
-            <div class="vstep-label">Instalación automática</div>
-            <div class="vstep-desc">Termux + AuroraOS + Vault se instalan solos</div>
-          </div>
-        </div>
-        <div class="vstep" id="step-6">
-          <div class="vstep-num">6</div>
-          <div class="vstep-info">
-            <div class="vstep-label">¡Listo! Vault está en tu teléfono</div>
-            <div class="vstep-desc">Desconecta USB y abre Vault</div>
-          </div>
+    <!-- Pasos -->
+    <div class="steps-card">
+      <div class="step-row">
+        <div class="step-num">1</div>
+        <div class="step-info">
+          <div class="step-label">Activa Depuración USB</div>
+          <div class="step-desc">Ajustes → Acerca del teléfono → toca "Número de compilación" 7 veces → Opciones de desarrollador → Depuración USB</div>
         </div>
       </div>
-
-      <!-- Status -->
-      <div class="status-box" id="status-box">
-        <span id="status-msg"></span>
-        <div class="prog"><div class="prog-fill" id="prog-fill"></div></div>
-      </div>
-
-      <!-- Log -->
-      <div class="log-box" id="log-box"></div>
-
-      <!-- Botón principal -->
-      <button class="btn btn-primary" id="btn-install" onclick="startInstall()">
-        ⚡ Instalar Vault
-      </button>
-
-      <!-- Botón de éxito (oculto hasta completar) -->
-      <button class="btn btn-success" id="btn-done" style="display:none;margin-top:12px" onclick="showDone()">
-        ✓ Ver instrucciones finales
-      </button>
-
-      <!-- WebUSB no soportado -->
-      <div class="status-box warn" id="no-webusb" style="display:none">
-        ⚠ Tu navegador no soporta WebUSB.
-        Usa <strong>Chrome</strong> o <strong>Edge</strong> en escritorio,
-        o usa la pestaña "Manual" para instalar por terminal.
-      </div>
-
-    </div><!-- /panel-auto -->
-
-    <!-- ══ PANEL MANUAL ══ -->
-    <div class="panel" id="panel-manual">
-
-      <div class="manual-card">
-        <div class="manual-head">
-          <div class="manual-step-label">Paso 1</div>
-          <div class="manual-step-title">Instala ADB en tu PC</div>
-        </div>
-        <div class="cmd-row">
-          <div class="cmd-text">
-            # macOS:<br>brew install android-platform-tools<br><br>
-            # Windows: descarga Platform Tools de developer.android.com<br><br>
-            # Linux:<br>sudo apt install adb
-          </div>
+      <div class="step-row">
+        <div class="step-num">2</div>
+        <div class="step-info">
+          <div class="step-label">Descarga el instalador</div>
+          <div class="step-desc">Toca el botón de tu sistema operativo arriba</div>
         </div>
       </div>
-
-      <div class="manual-card">
-        <div class="manual-head">
-          <div class="manual-step-label">Paso 2</div>
-          <div class="manual-step-title">Conecta y verifica</div>
-        </div>
-        <div class="cmd-row">
-          <div class="cmd-text" id="cmd-verify">adb devices</div>
-          <button class="btn-copy" onclick="copyCmd('adb devices',this)">Copiar</button>
+      <div class="step-row">
+        <div class="step-num">3</div>
+        <div class="step-info">
+          <div class="step-label">Conecta tu teléfono y ejecuta</div>
+          <div class="step-desc">Windows: doble clic en el .bat — Mac/Linux: bash install-mac-linux.sh</div>
         </div>
       </div>
-
-      <div class="manual-card">
-        <div class="manual-head">
-          <div class="manual-step-label">Paso 3</div>
-          <div class="manual-step-title">Instala Termux</div>
-        </div>
-        <div class="cmd-row">
-          <div class="cmd-text" id="cmd-termux">adb install termux.apk</div>
-          <button class="btn-copy" onclick="copyCmd('adb install termux.apk',this)">Copiar</button>
+      <div class="step-row">
+        <div class="step-num">4</div>
+        <div class="step-info">
+          <div class="step-label">Acepta "Confiar en esta PC"</div>
+          <div class="step-desc">Aparece una sola vez en tu teléfono</div>
         </div>
       </div>
-
-      <div class="manual-card">
-        <div class="manual-head">
-          <div class="manual-step-label">Paso 4</div>
-          <div class="manual-step-title">Instala Vault desde Termux</div>
-        </div>
-        <div class="cmd-row">
-          <div class="cmd-text" id="cmd-vault">pkg install -y curl && curl -fsSL https://alexiszapeta06-arch.github.io/vault/install.sh | bash</div>
-          <button class="btn-copy" onclick="copyCmd('pkg install -y curl && curl -fsSL https://alexiszapeta06-arch.github.io/vault/install.sh | bash',this)">Copiar</button>
+      <div class="step-row">
+        <div class="step-num">5</div>
+        <div class="step-info">
+          <div class="step-label">¡Listo! Vault se instala solo</div>
+          <div class="step-desc">Termux + AuroraOS + Vault quedan instalados automáticamente</div>
         </div>
       </div>
-
-    </div><!-- /panel-manual -->
+    </div>
 
     <!-- Requisitos -->
     <div class="req" style="margin-top:16px">
