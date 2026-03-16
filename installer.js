@@ -75,13 +75,13 @@ VAULT_DIR="$HOME/.vault/aurora-data"
 
 # Descargar server.py si no existe
 if [ ! -f "$VAULT_DIR/server.py" ]; then
-  curl -fsSL "https://vault-app.pages.dev/server.py" -o "$VAULT_DIR/server.py" 2>/dev/null || \\
-  wget -qO "$VAULT_DIR/server.py" "https://vault-app.pages.dev/server.py" 2>/dev/null || true
+  curl -fsSL "https://alexiszapeta06-arch.github.io/vault/server.py" -o "$VAULT_DIR/server.py" 2>/dev/null || \\
+  wget -qO "$VAULT_DIR/server.py" "https://alexiszapeta06-arch.github.io/vault/server.py" 2>/dev/null || true
 fi
 
 if [ ! -f "$VAULT_DIR/core.py" ]; then
-  curl -fsSL "https://vault-app.pages.dev/core.py" -o "$VAULT_DIR/core.py" 2>/dev/null || \\
-  wget -qO "$VAULT_DIR/core.py" "https://vault-app.pages.dev/core.py" 2>/dev/null || true
+  curl -fsSL "https://alexiszapeta06-arch.github.io/vault/core.py" -o "$VAULT_DIR/core.py" 2>/dev/null || \\
+  wget -qO "$VAULT_DIR/core.py" "https://alexiszapeta06-arch.github.io/vault/core.py" 2>/dev/null || true
 fi
 
 # ── Crear scripts de control ──────────────────────────────
